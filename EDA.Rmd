@@ -1,0 +1,167 @@
+---
+title: "EDA"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(zoo)
+```
+
+# Set correct path
+
+```{r}
+setwd("~/Documents/WessexWater/")
+getwd()
+```
+
+# Load Flow data and Repair Jobs
+
+```{r}
+load("datFlow.Rda")
+load("repFlow.Rda")
+```
+
+# Select a Flow Series & Transform date to Date format
+
+```{r}
+series = "AW008"
+df = datFlow %>% 
+  filter(id == series) %>% 
+  mutate(date = as.Date(date))
+```
+
+
+# Plot it
+
+```{r}
+ggplot(data=df, aes(x=date, y=y)) + 
+  geom_point()
+```
+
+# Grab repFlow and filter by the same ID. Find start and end dates
+
+```{r}
+tmpStart = repFlow %>% 
+      filter(id == series) %>% 
+      select(starts_with("Start")) %>% 
+      select_if(~ !any(is.na(.))) %>% 
+      mutate_all( ~ as.Date(.)) %>% 
+      gather
+```
+
+```{r}
+tmpEnd <- repFlow %>% filter(id == series) %>% 
+                      select(starts_with("End")) %>% 
+                      select_if(~ !any(is.na(.))) %>% 
+                      mutate_all( ~ as.Date(.)) %>% gather 
+```
+
+# Plot all the repair jobs, if there are any
+
+```{r}
+pl = ggplot(data=df, aes(x=date, y=y)) + 
+  geom_point()
+if(nrow(tmpStart)){
+ pl <- pl + geom_vline(xintercept = tmpStart$value, col = 3)
+}
+if(nrow(tmpEnd)){
+ pl <- pl + geom_vline(xintercept = tmpEnd$value, col = 2)
+}
+```
+
+# Compute minimum night flow
+
+```{r}
+mnf = df[(9 <= df$tod) & (df$tod <= 21), ] %>% group_by(id, date) %>% summarise(mnf=min(y)) %>% ungroup()
+```
+
+# Compute average daily flow
+```{r}
+adf = df[(9 > df$tod) | (df$tod > 21), ] %>% group_by(id, date) %>% summarise(adf=mean(y)) %>% ungroup()
+```
+
+# Rolling average
+```{r}
+n_days = 7
+rolling = data.frame(
+  date=as.Date(rollmean(mnf$date, k=n_days)),
+  mnf=rollmean(mnf$mnf, k=n_days),
+  adf=rollmean(adf$adf, k=n_days)
+)
+```
+
+# Plot
+```{r}
+pl = rolling %>% 
+  gather(key, value, -date) %>% 
+  {ggplot(data=.) + geom_line(aes(x=date, y=value, color=key))}
+
+if(nrow(tmpStart)){
+ pl <- pl + geom_vline(xintercept = tmpStart$value, col = 3)
+}
+if(nrow(tmpEnd)){
+ pl <- pl + geom_vline(xintercept = tmpEnd$value, col = 2)
+}
+```
+
+
+
+# Put the series together
+```{r}
+mnf_adf = mnf %>% mutate(adf=adf$adf)
+mnf_adf %>% gather(key, value, -id, -date) %>% 
+  {ggplot(data=.) + geom_line(aes(x=date, y=value, color=key))}
+
+```
+
+
+
+# New Idea
+Clustering. I want to grab a subset of timeseries. For each time series, I want to obtain the ratio between rolling average MNF and rolling average ADF. I call this ratio_rolling. Then I want to cluster these timeseries based on ratio rolling.
+
+### Grab first 50 series
+
+```{r}
+series = unique(datFlow$id)[1:50]
+```
+
+### grab equivalent data
+
+```{r}
+df = datFlow %>% 
+  filter(id %in% series)
+```
+
+### Decide start of night and end of night
+```{r}
+night_start = 9     # 2 am
+night_end = 21      # 5:30 am 
+```
+
+### Calculate MNF & ADF
+
+```{r}
+mnf = df %>% filter((night_start <= tod) & (tod <= night_end)) %>% group_by(id, date) %>% summarise(mnf=min(y)) %>% ungroup()
+adf = df %>% filter((night_start > tod) | (tod > night_end)) %>% group_by(id, date) %>% summarise(adf=mean(y)) %>% ungroup()
+```
+
+### Compute 7 days rolling average for MNF
+
+```{r}
+dfs = mnf %>%
+    filter(id == series[1]) %>% 
+    mutate(mnf_roll=rollmean(mnf, 7, na.pad=TRUE))
+for (ix in 2:50){
+  dfs = mnf %>%
+  filter(id == series[ix]) %>% 
+  mutate(mnf_roll=rollmean(mnf, 7, na.pad=TRUE)) %>% 
+  rbind(dfs, .)
+}
+```
+
+
+
+
+
