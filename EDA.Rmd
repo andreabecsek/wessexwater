@@ -12,15 +12,16 @@ library(zoo)
 # Set correct path
 
 ```{r}
-setwd("~/Documents/WessexWater/")
+path = "~/Documents/University/WessexWater/wessexwater/"
+setwd(path)
 getwd()
 ```
 
 # Load Flow data and Repair Jobs
 
 ```{r}
-load("datFlow.Rda")
-load("repFlow.Rda")
+load("../datFlow.rda")
+load("../repFlow.rda")
 ```
 
 # Select a Flow Series & Transform date to Date format
