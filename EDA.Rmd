@@ -27,7 +27,7 @@ load("../repFlow.rda")
 # Select a Flow Series & Transform date to Date format
 
 ```{r}
-series = "AW008"
+myid = "AW008"
 df = datFlow %>% 
   filter(id == series) %>% 
   mutate(date = as.Date(date))
@@ -45,7 +45,7 @@ ggplot(data=df, aes(x=date, y=y)) +
 
 ```{r}
 tmpStart = repFlow %>% 
-      filter(id == series) %>% 
+      filter(id == myid) %>% 
       select(starts_with("Start")) %>% 
       select_if(~ !any(is.na(.))) %>% 
       mutate_all( ~ as.Date(.)) %>% 
@@ -53,7 +53,7 @@ tmpStart = repFlow %>%
 ```
 
 ```{r}
-tmpEnd <- repFlow %>% filter(id == series) %>% 
+tmpEnd <- repFlow %>% filter(id == myid) %>% 
                       select(starts_with("End")) %>% 
                       select_if(~ !any(is.na(.))) %>% 
                       mutate_all( ~ as.Date(.)) %>% gather 
