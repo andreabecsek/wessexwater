@@ -151,6 +151,17 @@ adf = df %>% filter((night_start > tod) | (tod > night_end)) %>% group_by(id, da
 ### Compute 7 days rolling average for MNF
 
 ```{r}
+inter_roll <- function(df, n_days=7){
+  new <- df %>% 
+    mutate(mnf_roll=rollmean(mnf, n_days, na.pad=TRUE)) %>% 
+    select(-mnf)
+  new$mnf_roll = na.spline(new$mnf_roll, 1:nrow(new))
+  return(new)
+}
+```
+
+
+```{r}
 dfs = mnf %>%
     filter(id == series[1]) %>% 
     mutate(mnf_roll=rollmean(mnf, 7, na.pad=TRUE))
