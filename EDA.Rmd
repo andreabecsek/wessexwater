@@ -29,7 +29,7 @@ load("../repFlow.rda")
 ```{r}
 myid = "AW008"
 df = datFlow %>% 
-  filter(id == series) %>% 
+  filter(id == myid) %>% 
   mutate(date = as.Date(date))
 ```
 
