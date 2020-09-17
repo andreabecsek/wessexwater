@@ -146,19 +146,43 @@ server = function(input, output) {
     })
     
     # All repair jobs
-    # alljobs = reactive({
-    #   repFlow %>% 
-    #   select(-Region, -Area, -Area_reference) %>% 
-    #   gather("key", "value") %>% 
-    #   na.omit
-    # })
+    alljobs = repFlow %>%
+      select(-Region, -Area, -Area_reference) %>%
+      gather("key", "value", -id) %>%
+      na.omit
+    
+    # start of jobs
+    job_starts = reactive({
+      alljobs %>% 
+      filter(id == input$meter_id) %>% 
+      filter(str_detect(key, "Start")) %>% 
+      filter(as.Date(value) >= as.Date(input$date[1]), as.Date(value) <= as.Date(input$date[2]))
+    })
+    
+    # # end of jobs
+    job_ends = reactive({
+      alljobs %>%
+        filter(id == input$meter_id) %>%
+        filter(str_detect(key, "End")) %>%
+        filter(value >= as.Date(input$date[1]), value <= as.Date(input$date[2]))
+    })
+    
     
   # create plot object that the plotOutput function is expecting
   output$timeseries = renderPlot({
-    ggplot(mnf_adf_1(),aes(x=date, y=y, color=key)) +
+    plot = ggplot(mnf_adf_1(),aes(x=date, y=y, color=key)) +
           geom_line() +
           theme_bw() +
           labs(x="Date", y="Flow")
+    
+    if(nrow(job_starts())){
+    plot <- plot +
+      geom_vline(xintercept = as.Date(job_starts()$value), lty=2)
+  }
+  if(nrow(job_ends())){
+   plot <- plot + geom_vline(xintercept = as.Date(job_ends()$value), lty=1)
+  }
+    plot
   })
 }
 
