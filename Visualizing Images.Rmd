@@ -7,3 +7,39 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(shiny)
+library(tidyverse)
+library(magrittr)
+```
+
+# Create a function that plots a time series
+
+```{r}
+# Set correct path
+path = "~/Documents/University/WessexWater/wessexwater/"
+setwd(path)
+# Load Data
+load("../datFlow.Rda")
+load("../repFlow.Rda")
+```
+
+```{r}
+# Night start & Night end
+night_start = 9    # 2 am
+night_end   = 13   # 3 am
+# Compute MNF and ADF
+mnf = datFlow %>% filter((night_start <= tod) & (tod <= night_end)) %>% group_by(id, date) %>% summarise(y=min(y)) %>% ungroup()
+adf = datFlow %>% filter((night_start > tod) | (tod > night_end)) %>% group_by(id, date) %>% summarise(y=mean(y)) %>% ungroup()
+```
+
+```{r}
+# plot minimum night flow for a given series
+series_id = "AW008"
+filter_mnf = mnf %>% filter(id == series_id)
+filter_adf = adf %>% filter(id == series_id)
+ggplot(data=filter_mnf) + 
+  geom_line(aes(x=as.Date(date), y=y)) + 
+  geom_line(aes(x=as.Date(date), y=y))
+```
+
