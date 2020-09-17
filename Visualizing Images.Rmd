@@ -95,7 +95,7 @@ plot_series = function(series_id, date_from, date_to){
   if(nrow(job_ends)){
    plot <- plot + geom_vline(xintercept = as.Date(job_ends$value), lty=1)
   }
-  # Keep only dates requested
+  # Keep only dates requested (scale_x_date not needed probably)
   plot = plot + scale_x_date(limits=c(as.Date(date_from), as.Date(date_to)))
   return(plot)
 }
