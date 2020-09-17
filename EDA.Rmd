@@ -12,7 +12,7 @@ library(zoo)
 # Set correct path
 
 ```{r}
-path = "~/Documents/University/WessexWater/wessexwater/"
+#path = "~/Documents/University/WessexWater/wessexwater/"
 setwd(path)
 getwd()
 ```
