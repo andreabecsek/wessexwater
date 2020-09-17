@@ -1,0 +1,13 @@
+name: wessexwater
+title: wessexwater
+username:
+account: mauro-camara
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 2828217
+bundleId: 3639025
+url: https://mauro-camara.shinyapps.io/wessexwater/
+when: 1600330280.54818
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: EDA.Rmd|gitignore|plan.md|Visualizing Images.Rmd

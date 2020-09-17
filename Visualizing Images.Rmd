@@ -1,0 +1,103 @@
+---
+title: "Visualizing Series"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(shiny)
+library(tidyverse)
+library(magrittr)
+```
+
+# Create a function that plots a time series
+
+```{r}
+# Set correct path
+path = "~/Documents/University/WessexWater/wessexwater/"
+setwd(path)
+# Load Data
+load("../datFlow.Rda")
+load("../repFlow.Rda")
+```
+
+```{r}
+# Night start & Night end
+night_start = 9    # 2 am
+night_end   = 13   # 3 am
+# Compute MNF and ADF
+mnf = datFlow %>% filter((night_start <= tod) & (tod <= night_end)) %>% group_by(id, date) %>% summarise(mnf=min(y)) %>% ungroup()
+adf = datFlow %>% filter((night_start > tod) | (tod > night_end)) %>% group_by(id, date) %>% summarise(adf=mean(y)) %>% ungroup()
+# Put mnf and adf together
+mnf_adf = mnf %>% left_join(adf, by=c("id", "date"), suffix=c("_mnf", "_adf"))
+# Put into long format
+mnf_adf = mnf_adf %>% gather("key", "y", -id, -date)
+```
+
+```{r}
+alljobs = repFlow %>% 
+  select(-Region, -Area, -Area_reference) %>% 
+  gather("key", "value", -id) %>% 
+  na.omit
+```
+
+
+```{r}
+# plot minimum night flow for a given series
+series_id = "AW008"
+# Specify date range
+start_date_plot = "2017-04-01"
+end_date_plot = '2017-07-01'
+plot = mnf_adf %>% 
+  filter(id == series_id) %>% 
+  ggplot() + 
+    geom_line(aes(x=as.Date(date), y=y, color=key)) + 
+    theme_bw() + 
+    labs(x="Date", y="Flow")
+# Grab start jobs and add them to the plot
+job_starts = alljobs %>% filter(id == series_id) %>% filter(str_detect(key, "Start")) 
+job_ends = alljobs %>% filter(id == series_id) %>% filter(str_detect(key, "End")) 
+if(nrow(job_starts)){
+ plot <- plot + geom_vline(xintercept = as.Date(job_starts$value), lty=2)
+}
+if(nrow(job_ends)){
+ plot <- plot + geom_vline(xintercept = as.Date(job_ends$value), lty=1)
+}
+plot + 
+  scale_x_date(limits=c(as.Date(start_date_plot), as.Date(end_date_plot)))
+```
+
+
+```{r}
+plot_series = function(series_id, date_from, date_to){
+  # MNF and ADF plot
+  plot = mnf_adf %>% 
+        filter(id == series_id, date >= date_from, date <= date_to) %>% 
+        ggplot() + 
+          geom_line(aes(x=as.Date(date), y=y, color=key)) + 
+          theme_bw() + 
+          labs(x="Date", y="Flow")
+  # Plot end and start jobs
+  job_starts = alljobs %>% 
+    filter(id == series_id) %>% 
+    filter(str_detect(key, "Start")) %>% 
+    filter(value >= date_from, value <= date_to)
+  job_ends = alljobs %>% 
+    filter(id == series_id) %>% 
+    filter(str_detect(key, "End")) %>% 
+    filter(value >= date_from, value <= date_to)
+  if(nrow(job_starts)){
+   plot <- plot + geom_vline(xintercept = as.Date(job_starts$value), lty=2)
+  }
+  if(nrow(job_ends)){
+   plot <- plot + geom_vline(xintercept = as.Date(job_ends$value), lty=1)
+  }
+  # Keep only dates requested (scale_x_date not needed probably)
+  plot = plot + scale_x_date(limits=c(as.Date(date_from), as.Date(date_to)))
+  return(plot)
+}
+```
+
