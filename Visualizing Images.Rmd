@@ -54,9 +54,10 @@ end_date_plot = '2017-07-01'
 plot = mnf_adf %>% 
   filter(id == series_id) %>% 
   ggplot() + 
-    geom_line(aes(x=as.Date(date), y=y, color=key)) + 
+    geom_line(aes(x=as.Date(date), y=y, color=key)) +
     theme_bw() + 
     labs(x="Date", y="Flow")
+
 # Grab start jobs and add them to the plot
 job_starts = alljobs %>% filter(id == series_id) %>% filter(str_detect(key, "Start")) 
 job_ends = alljobs %>% filter(id == series_id) %>% filter(str_detect(key, "End")) 
