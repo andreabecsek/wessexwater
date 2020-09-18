@@ -24,5 +24,8 @@ load("../repFlow.Rda")
 
 datFlow2 <- datFlow %>% filter(id == "AW077")
 repFlow2 <- repFlow %>% filter(id == "AW077")
+
+save(datFlow2, file = "../smalldata.RData")
+save(repFlow2, file = "../smalljobdata.RData")
 ```
 
