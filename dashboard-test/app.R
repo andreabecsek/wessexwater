@@ -6,43 +6,10 @@ library(shinythemes)
 library(shinydashboard)
 library(zoo)
 
-#Load Data
-
-load("../../datFlow.Rda")
-load("../../repFlow.Rda")
-
-#Functions to get mnf and based on the night start and end time
-get_mnf <- function(df, night_start, night_end) {
-    df <- df %>%
-        filter((night_start <= tod) & (tod <= night_end)) %>%
-        group_by(id, date) %>%
-        summarise(mnf = min(y)) %>%
-        ungroup()
-    return(df)
-}
-
-get_adf <- function(df, night_start, night_end) {
-    df <- df %>%
-        filter((night_start > tod) | (tod > night_end)) %>%
-        group_by(id, date) %>%
-        summarise(adf = mean(y)) %>%
-        ungroup()
-    return(df)
-}
-
-### Compute 7 days rolling average for MNF
-
-inter_roll <- function(df, n_days = 7) {
-    new <- df %>%
-        mutate(mnf_roll = rollmean(mnf, n_days, na.pad = TRUE)) %>%
-        select(-mnf)
-    new$mnf_roll <- na.spline(new$mnf_roll, 1:nrow(new))
-    return(new)
-}
-
+# source global which contains helper functions, global variables and the data
+source("./global.R")
 
 #Define UI
-
 ui <- dashboardPage(
     dashboardHeader(title = "Time series for given meter ID"),
     dashboardSidebar(
@@ -80,7 +47,6 @@ ui <- dashboardPage(
 )
 
 # Define Server function
-
 server <- function(input, output) {
     selected_series <- reactive({
         
@@ -158,18 +124,18 @@ server <- function(input, output) {
     
     # create plot object that the plotOutput function is expecting
     output$timeseries <- renderPlot({
-        plot <- ggplot(mnf_adf_1(), aes(x = date, y = y, color = key)) +
+        plot <- ggplot(mnf_adf_1(), aes(x = as.Date(date), y = y, color = key)) +
             geom_line() +
             theme_bw() +
             labs(x = "Date", y = "Flow")
-        
-        # if (nrow(job_starts())) {
-        #     plot <- plot +
-        #         geom_vline(xintercept = as.Date(job_starts()$value), lty = 2)
-        # }
-        # if (nrow(job_ends())) {
-        #     plot <- plot + geom_vline(xintercept = as.Date(job_ends()$value), lty = 1)
-        # }
+
+        if (nrow(job_starts())) {
+            plot <- plot +
+                geom_vline(xintercept = as.Date(job_starts()$value), lty = 2)
+        }
+        if (nrow(job_ends())) {
+            plot <- plot + geom_vline(xintercept = as.Date(job_ends()$value), lty = 1)
+        }
         plot
     })
 }

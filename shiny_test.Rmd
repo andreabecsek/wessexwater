@@ -97,8 +97,13 @@ ui <- fluidPage(
     ),
 
     # output
-    mainPanel(
-      plotOutput(outputId = "timeseries")
+    mainPanel("main panel",
+              fluidRow(
+                      splitLayout(cellWidths = c("50%","50%"), 
+                      plotOutput(outputId = "timeseries"),
+                      plotOutput(outputId = "test")
+                      )
+              )
     )
   )
 )
@@ -215,6 +220,11 @@ server <- function(input, output) {
       plot <- plot + geom_vline(xintercept = as.Date(job_ends()$value), lty = 1)
     }
     plot
+  })
+  
+  output$test = renderPlot({
+    ggplot(mnf_adf_1(), aes(x = as.Date(date), y = y, color = key)) +
+      geom_line()
   })
 }
 
