@@ -40,10 +40,12 @@ ui <- dashboardPage(
         # main body
         dashboardBody(
             fluidRow(
-                box(plotOutput(outputId = "timeseries"))
+                column(width = 7,
+                    box(title = "Box title", width = NULL, status = "primary", plotOutput(outputId = "timeseries")),
+                    box(title = "Box title", width = NULL, plotOutput(outputId = "differences"))
+                )
             )
         )
-    
 )
 
 # Define Server function
@@ -96,7 +98,8 @@ server <- function(input, output) {
     # Put mnf and adf together
     mnf_adf <- reactive({
         mnf_roll() %>%
-            left_join(adf_roll(), by = c("id", "date"), suffix = c("_mnf", "_adf"))
+            left_join(adf_roll(), by = c("id", "date"), suffix = c("_mnf", "_adf")) %>% 
+            transform(difference=value_roll_adf -  value_roll_mnf)
     })
     
     # Put into long format
@@ -137,6 +140,10 @@ server <- function(input, output) {
             plot <- plot + geom_vline(xintercept = as.Date(job_ends()$value), lty = 1)
         }
         plot
+    })
+    
+    output$differences = renderPlot({
+        plot(diff(mnf_adf()$difference, lag=1), type='l')
     })
 }
 
