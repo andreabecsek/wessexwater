@@ -118,9 +118,11 @@ server = function(input, output) {
     # Put mnf and adf together
     mnf_adf = reactive({
       mnf_roll() %>%
-      left_join(adf_roll(), by=c("id","date"), suffix=c("_mnf", "_adf"))
+      left_join(adf_roll(), by=c("id","date"), suffix=c("_mnf", "_adf")) %>% 
+      transform(difference=value_roll_adf -  value_roll_mnf)
     })
-
+    # plot(diff(mnf_adf$difference, lag=1), type='l')
+    
     # Put into long format
     mnf_adf_1 = reactive({
       mnf_adf() %>%
