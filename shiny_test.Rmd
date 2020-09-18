@@ -11,7 +11,7 @@ library(ggplot2)
 library(dplyr)
 library(magrittr)
 library(shinythemes)
-
+library(zoo)
 ```
 
 Load Data
@@ -81,7 +81,12 @@ ui = fluidPage(theme = shinytheme("lumen"),
                                   start = "2017-01-01",
                                   end = "2020-01-26",
                                   min = "2017-01-01",
-                                  max = "2020-01-26")
+                                  max = "2020-01-26"),
+                  
+                  sliderInput("roll_mean_days", 
+                              "Rolling Mean Window Size:",
+                              min = 1, max = 30,
+                              value = 7),
                  ),
                  
                    # output
@@ -121,22 +126,40 @@ server = function(input, output) {
       selected_series() %>% 
       filter((night_start <= tod) & (tod <= night_end)) %>% 
       group_by(id,date) %>% 
-      summarise(mnf=min(y)) %>% 
-      ungroup()
+      summarise(value=min(y)) %>% 
+      ungroup() 
     })
     
     adf = reactive({
       selected_series() %>%
       filter((night_start > tod) | (tod > night_end)) %>%
       group_by(id, date) %>%
-      summarise(adf=mean(y)) %>%
-      ungroup()
+      summarise(value=mean(y)) %>%
+      ungroup() 
+    })
+    
+    # function to compute the rolling mean and uses interpolation to impute NAs
+    inter_roll <- function(df, n_days=7){
+      new <- df %>% 
+      mutate(value_roll=rollmean(value, n_days, na.pad=TRUE)) %>% 
+      select(-value)
+      new$value_roll = na.spline(new$value_roll, 1:nrow(new))
+      return(new)
+    }
+    
+    # get rolling means for mnf and adf
+    mnf_roll = reactive({
+      inter_roll(mnf(), input$roll_mean_days)
+    })
+    
+    adf_roll = reactive({
+      inter_roll(adf(), input$roll_mean_days)
     })
 
     # Put mnf and adf together
     mnf_adf = reactive({
-      mnf() %>%
-      left_join(adf(), by=c("id","date"), suffix=c("_mnf", "_adf"))
+      mnf_roll() %>%
+      left_join(adf_roll(), by=c("id","date"), suffix=c("_mnf", "_adf"))
     })
 
     # Put into long format
