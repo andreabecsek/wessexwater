@@ -168,6 +168,11 @@ server = function(input, output) {
   }
     plot
   })
+  
+  output$test = renderPlot({
+    ggplot(mnf_adf_1(), aes(x = as.Date(date), y = y, color = key)) +
+      geom_line()
+  })
 }
 
 # create shiny object
