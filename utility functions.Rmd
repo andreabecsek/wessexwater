@@ -1,0 +1,53 @@
+---
+title: "utility functions"
+author: "Mauro Camara Escudero"
+date: "9/18/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Functions to get mnf and based on the night start and end time
+```{r}
+get_mnf = function(df, night_start, night_end){
+  df = df %>% 
+    filter((night_start <= tod) & (tod <= night_end)) %>% 
+    group_by(id, date) %>% 
+    summarise(mnf=min(y)) %>% 
+    ungroup()
+  return(df)
+}
+
+get_adf = function(df, night_start, night_end){
+  df= df %>% 
+    filter((night_start > tod) | (tod > night_end)) %>% 
+    group_by(id, date) %>% 
+    summarise(adf=mean(y)) %>% 
+    ungroup()
+  return(df)
+}
+```
+
+### Compute 7 days rolling average for MNF
+```{r}
+inter_roll <- function(df, n_days=7){
+  new <- df %>% 
+    mutate(mnf_roll=rollmean(mnf, n_days, na.pad=TRUE)) %>% 
+    select(-mnf)
+  new$mnf_roll = na.spline(new$mnf_roll, 1:nrow(new))
+  return(new)
+}
+```
+
+
+Plot time series for one id
+```{r}
+myid = "AW008"
+df = datFlow %>% 
+  filter(id == myid) %>% 
+  mutate(date = as.Date(date))
+ggplot(df, aes(x = date, y = y))+
+  geom_path()
+```
