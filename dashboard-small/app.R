@@ -42,7 +42,7 @@ ui <- dashboardPage(
         fluidRow(
             column(width = 7,
                    box(title = "Box title", width = NULL, status = "primary", plotOutput(outputId = "timeseries")),
-                   box(title = "Box title", width = NULL, plotOutput(outputId = "differences"))
+                   box(plotOutput("changepoints"))
             )
         )
     )
@@ -125,6 +125,21 @@ server <- function(input, output) {
     })
     
     
+    differences = reactive({
+        data.frame(date = mnf_adf()$date, 
+                   diff = c(NA, diff(mnf_adf()$difference, lag = 1)))
+    })
+    
+    output$differences = renderPlot({
+        #plot(diff(mnf_adf()$difference, lag=1), type='l')
+        ggplot(differences(), aes(x = as.Date(date), y= diff))+
+            geom_line()
+    })
+    
+    output$test = DT::renderDataTable({
+        mnf_adf_1()
+    })
+    
     # create plot object that the plotOutput function is expecting
     output$timeseries <- renderPlot({
         plot <- ggplot(mnf_adf_1(), aes(x = as.Date(date), y = y, color = key)) +
@@ -143,16 +158,26 @@ server <- function(input, output) {
         plot
     })
     
-    differences = reactive({
-        data.frame(date = mnf_adf()$date, 
-                   diff = c(NA, diff(mnf_adf()$difference, lag = 1)))
-    })
+    # # detect change points
+    # change_points = reactive({
+    #     detect_changepoints(selected_series(),
+    #                         inspect_thresh=c(10,10,2000,2005))
+    # })
+    # 
+    # # add column of detected change points
+    # dat_with_cp = reactive({
+    #     selected_series() %>% 
+    #     mutate(is_cp = ifelse(row_number() %in% change_points(), 1, 0))
+    # })
+    # 
+    # output$changepoints = renderPlot({
+    #     ggplot(dat_with_cp(), aes(x = as.Date(date), y = adf))+
+    #         geom_line()+
+    #         geom_vline(xintercept=dat_with_cp()$date[dat_with_cp()$is_cp==1])
+    # })
+
     
-    output$differences = renderPlot({
-        #plot(diff(mnf_adf()$difference, lag=1), type='l')
-        ggplot(differences(), aes(x = as.Date(date), y= diff))+
-            geom_line()
-    })
+    
 }
 
 # create shiny object

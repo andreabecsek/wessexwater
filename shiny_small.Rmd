@@ -14,13 +14,12 @@ library(magrittr)
 library(shinythemes)
 library(zoo)
 library(tidyverse)
-library(plotly)
 ```
 
-Load Data
+Load Data for one meter
 ```{r}
-load("../datFlow.Rda")
-load("../repFlow.Rda")
+load("../smalldata.RData")
+load("../smalljobdata.RData")
 #datFlow$date = as.Date(datFlow$date)
 ```
 
@@ -170,19 +169,12 @@ server = function(input, output) {
     plot
   })
   
-  # output$test = renderPlot({
-  #   ggplot(mnf_adf_1(), aes(x = as.Date(date), y = y, color = key)) +
-  #     geom_line()
-  # })
-  
-  output$test = DT::renderDataTable({
-    mnf_adf_1()
+  output$test = renderPlot({
+    ggplot(mnf_adf_1(), aes(x = as.Date(date), y = y, color = key)) +
+      geom_line()
   })
 }
 
 # create shiny object
 shinyApp(ui = ui, server = server)
 ```
-
-
-

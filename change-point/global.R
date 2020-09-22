@@ -8,13 +8,13 @@ library(zoo)
 
 
 #Load Data for a single id and rename for ease
-load("../../smalldata.RData")
-load("../../smalljobdata.RData")
+# load("../../smalldata.RData")
+# load("../../smalljobdata.RData")
 load("~/Documents/ww/datFlow_ss.RData")
-datFlow = datFlow2
-repFlow = repFlow2
-dat <- datFlow_ss %>%
-  filter(id == "AW070")
+# datFlow = datFlow2
+# repFlow = repFlow2
+# dat <- datFlow_ss %>%
+#   filter(id == "AW070")
 
 # night start % night end
 night_start <- 9 # 2 am
@@ -50,7 +50,7 @@ compute_windowed_variance <- function(data, window_size){
 # and a set of 4 thresholds, this function will output a set of times which contain changepoints
 # you can detect 3 types of changepoint: changes in the mean of adf or mnf, changes in the trend, and
 # you can also detect if adf and mnf are tracking eachother
-detect_changepoints <- function(data, myid, var_window = 20, inspect_thresh, mean=TRUE, trend=TRUE, tracking=TRUE){
+detect_changepoints <- function(data, var_window = 20, inspect_thresh, mean=TRUE, trend=TRUE, tracking=TRUE){
   #data <- data %>% filter(id == myid)
   
   series <- list(
