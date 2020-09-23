@@ -5,6 +5,8 @@ library(magrittr)
 library(shinythemes)
 library(shinydashboard)
 library(zoo)
+library(DT)
+library(InspectChangepoint)
 
 # source global which contains helper functions, global variables and the data
 source("./global.R")
@@ -74,7 +76,7 @@ ui <- dashboardPage(
 
     dateRangeInput(
       inputId = "meter_date",
-      strong("Date range"),
+      strong("Date range for meter"),
       start = "2017-01-01",
       end = "2020-01-26",
       min = "2017-01-01",
@@ -83,37 +85,32 @@ ui <- dashboardPage(
     
     dateRangeInput(
       inputId = "alerts_date",
-      strong("Date range"),
+      strong("Date range for alerts"),
       start = "2020-01-01",
       end = "2020-01-26",
       min = "2017-01-01",
       max = "2020-01-26"
-    ),
-
-    sliderInput("roll_mean_days",
-      "Rolling Mean Window Size:",
-      min = 1, max = 30,
-      value = 7
     )
+
   ),
 
   # main body
   dashboardBody(
     fluidRow(
-      column(
-        width = 7,
         box(
           title = "ADF and MNF for chosen meter",
-          width = NULL,
+          width = 7,
           status = "primary",
           plotOutput(outputId = "changepoints")
         ),
-        box(
+        valueBoxOutput("progressBox"),
+        
+          box(
+          width = 4,
           title = "Alerts",
-          tableOutput(outputId = "table")
+          DT::dataTableOutput(outputId = "table"),style = "height:500px; overflow-y: scroll;overflow-x: scroll;"
         )
       )
-    )
   )
 )
 
@@ -138,44 +135,6 @@ server <- function(input, output) {
       filter(date >= as.Date(input$meter_date[1]) & date <= as.Date(input$meter_date[2]))
   })
 
-  # # Compute MNF and ADF
-  # mnf <- reactive({
-  #     selected_series() %>%
-  #         filter((night_start <= tod) & (tod <= night_end)) %>%
-  #         group_by(id, date) %>%
-  #         summarise(value = min(y)) %>%
-  #         ungroup()
-  # })
-  #
-  # adf <- reactive({
-  #     selected_series() %>%
-  #         filter((night_start > tod) | (tod > night_end)) %>%
-  #         group_by(id, date) %>%
-  #         summarise(value = mean(y)) %>%
-  #         ungroup()
-  # })
-
-  # # get rolling means for mnf and adf
-  # mnf_roll <- reactive({
-  #     inter_roll(mnf(), input$roll_mean_days)
-  # })
-  #
-  # adf_roll <- reactive({
-  #     inter_roll(adf(), input$roll_mean_days)
-  # })
-
-  # # Put mnf and adf together
-  # mnf_adf <- reactive({
-  #     mnf_roll() %>%
-  #         left_join(adf_roll(), by = c("id", "date"), suffix = c("_mnf", "_adf")) %>%
-  #         transform(difference=value_roll_adf -  value_roll_mnf)
-  # })
-  #
-  # # Put into long format
-  # mnf_adf_1 <- reactive({
-  #     mnf_adf() %>%
-  #         gather("key", "y", -id, -date)
-  # })
 
   # # start of jobs
   # job_starts <- reactive({
@@ -205,9 +164,6 @@ server <- function(input, output) {
   #         geom_line()
   # })
 
-  # output$test = DT::renderDataTable({
-  #     mnf_adf_1()
-  # })
 
   # # create plot object that the plotOutput function is expecting
   # output$timeseries <- renderPlot({
@@ -230,7 +186,10 @@ server <- function(input, output) {
   output$timeseries <- renderPlot({
     ggplot(selected_series()) +
       geom_line(aes(x = as.Date(date), y = adf)) +
-      geom_line(aes(x = as.Date(date), y = mnf))
+      geom_line(aes(x = as.Date(date), y = mnf))+
+      theme_minimal()+
+      scale_color_manual(labels = c("psavert", "uempmed"), 
+                         values = c("psavert"="#00ba38", "uempmed"="#f8766d"))
   })
 
   # detect change points
@@ -253,10 +212,13 @@ server <- function(input, output) {
   # plot change points
   output$changepoints <- renderPlot({
     ggplot(dat_with_cp()) +
-      geom_line(aes(x = as.Date(date), y = adf), color = "red") +
-      geom_line(aes(x = as.Date(date), y = mnf), color = "blue") +
+      geom_line(aes(x = as.Date(date), y = adf_res, color="ADF")) +
+      geom_line(aes(x = as.Date(date), y = mnf_res, color="MNF")) +
       geom_vline(xintercept = dat_with_cp()$date[dat_with_cp()$is_cp == 1]) +
-      theme_minimal()
+      labs(x="Date",y="Flow",color="")+
+      theme_minimal()+
+      scale_color_manual(values = c("ADF"="#00ba38", "MNF"="#f8766d"))
+      #theme(legend.position = "bottom")
   })
 
   # # find all change points within given time range
@@ -268,9 +230,18 @@ server <- function(input, output) {
 
   
   # add table of alerts
-  output$table = renderTable({
-    data.frame(all_cps()$alerts)
+  output$table = renderDataTable({
+    datatable(all_cps()$alerts)
   })
+  
+  # number of alerts
+  output$progressBox <- renderValueBox({
+    valueBox(
+      paste0(as.character(dim(all_cps()$alerts)[1]), " Alerts"), paste0("Between ",as.character(input$alerts_date[1])," and ", as.character(input$alerts_date[2])), icon = icon("exclamation-triangle"),
+      color = "red"
+    )
+  })
+  
 }
 
 # create shiny object
