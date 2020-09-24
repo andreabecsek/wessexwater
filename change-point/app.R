@@ -82,7 +82,12 @@ ui <- dashboardPage(
         title = "ADF and MNF for chosen meter",
         width = 7,
         status = "primary",
-        plotOutput(outputId = "changepoints")
+        plotOutput(outputId = "main",
+                   dblclick = "plotmain_dblclick",
+                   brush = brushOpts(
+                     id="plotmain_brush",
+                     resetOnNew = TRUE
+                   ))
       ),
 
       # Box with the number of detected alerts
@@ -190,9 +195,13 @@ server <- function(input, output) {
     selected_series() %>%
       mutate(is_cp = ifelse(row_number() %in% change_points(), 1, 0))
   })
+  
+  # Playing around with linked plots
+  ranges <- reactiveValues(x = NULL, y = NULL)
+  
 
   # Create time series plot of adf, mnf, job dates and change points
-  output$changepoints <- renderPlot({
+  output$main <- renderPlot({
     plot <- ggplot() +
       geom_line(
         data = dat_with_cp(),
@@ -221,7 +230,9 @@ server <- function(input, output) {
         "ADF" = "#00ba38",
         "MNF" = "#f8766d"
       )) +
-      theme(aspect.ratio = 0.5)
+      #theme(aspect.ratio = 0.5)
+      coord_cartesian(xlim = ranges$x, ylim = ranges$y, expand = FALSE)
+    
     
     y_min = plot$coordinates$limits$y[1]
     
@@ -230,15 +241,15 @@ server <- function(input, output) {
     # Add job start and end dates
     if (nrow(job_starts())) {
       plot <- plot +
-        # geom_vline(
-        #   xintercept = as.Date(job_starts()$value),
-        #   lty = 2, color = "red"
-        # )
-        geom_segment(aes(x=as.Date(job_starts()$value),
-                     xend=as.Date(job_starts()$value),
-                     y=rep(y_min,no_start_jobs),
-                     yend=rep(y_min,no_start_jobs)), 
-                     color='red')
+        geom_vline(
+          xintercept = as.Date(job_starts()$value),
+          lty = 2, color = "red"
+        )
+        # geom_segment(aes(x=as.Date(job_starts()$value),
+        #              xend=as.Date(job_starts()$value),
+        #              y=rep(y_min,no_start_jobs),
+        #              yend=rep(y_min,no_start_jobs)), 
+        #              color='red')
     }
     if (nrow(job_ends())) {
       plot <- plot +
@@ -248,6 +259,20 @@ server <- function(input, output) {
         )
     }
     plot
+  })
+
+  # If so, zoom to the brush bounds; if not, reset the zoom.
+  observeEvent(input$plotmain_dblclick, {
+    brush <- input$plotmain_brush
+    if (!is.null(brush)) {
+      ranges$x <- c(as.Date(brush$xmin, origin = "1970-01-01"), 
+                    as.Date(brush$xmax, origin = "1970-01-01"))
+      ranges$y <- c(brush$ymin, brush$ymax)
+      
+    } else {
+      ranges$x <- NULL
+      ranges$y <- NULL
+    }
   })
 
   # Find all change points within given time range
